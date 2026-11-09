@@ -40,3 +40,9 @@ Montserrat comes from `@fontsource/montserrat`. ABC Favorit Expanded is a commer
 ## Product photos
 
 Hardware photos load from `sam.dev.syniotec.com`. When that host can't be reached, the cards show built-in illustrations instead.
+
+## Live version
+
+GitHub Pages: https://easyvibesuxui-sketch.github.io/SYN-Shop/
+
+Every push to `main` runs `.github/workflows/pages.yml`, which builds the shop and publishes `dist/` to the `gh-pages` branch. Pages serves that branch.
