@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { DrawerRow, Icon, IconButton, StatusBadge, Tooltip, type IconName, type StatusTone } from '@syn';
+import { Button, DrawerRow, EmptyState, Icon, IconButton, Skeleton, StatusBadge, Tooltip, type IconName, type StatusTone } from '@syn';
 import { cx } from '@syn/utils';
-import { money, plural, type ArtType, type Availability, type OrderStatus } from './data';
+import { money, plural, type ArtType, type Availability, type OrderStatus, type PriceRequestStatus } from './data';
 import { routeHref, useShop } from './store';
 import hardwareArt from './assets/device-hardware.svg';
 import dotArt from './assets/device-dot.svg';
@@ -70,10 +70,37 @@ export function AvailabilityBadge({ availability }: { availability: Availability
 }
 
 const orderTone: Record<OrderStatus, StatusTone> = {
-  Submitted: 'neutral', Confirmed: 'info', Processing: 'progress', Shipped: 'info', Completed: 'success', Cancelled: 'error',
+  Submitted: 'neutral', Confirmed: 'info', Shipped: 'progress', Completed: 'success', Rejected: 'error', Cancelled: 'warning',
 };
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {
   return <StatusBadge tone={orderTone[status]}>{t(status)}</StatusBadge>;
+}
+
+const requestTone: Record<PriceRequestStatus, StatusTone> = { Submitted: 'neutral', Responded: 'success' };
+export function PriceRequestStatusBadge({ status }: { status: PriceRequestStatus }) {
+  return <StatusBadge tone={requestTone[status]}>{t(status)}</StatusBadge>;
+}
+
+/** A screen's data could not be loaded: what happened and Try again, in the Syn general empty state. */
+export function LoadError({ onRetry, what }: { onRetry: () => void; what: string }) {
+  return (
+    <EmptyState variant="general" icon="warning" title={t("{0} couldn’t be loaded", [what])} action={<Button size="sm" variant="secondary" iconStart="refresh" onClick={onRetry}>{t("Try again")}</Button>}>
+      {t("Check your connection and try again. If it keeps happening, contact Syniotec support.")}
+    </EmptyState>
+  );
+}
+
+/** Placeholder rows while a table loads, in the Syn skeleton. */
+export function TableSkeleton({ rows = 4, label }: { rows?: number; label: string }) {
+  return (
+    <div className="shop-skeleton-table" role="status" aria-label={label}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="shop-skeleton-table__row">
+          <Skeleton width="18%" /><Skeleton width="14%" /><Skeleton width="30%" /><Skeleton width="12%" /><Skeleton width="10%" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** Minus, the quantity and plus. Syn has no number stepper yet, so it is built from two outline IconButtons. */
@@ -103,7 +130,7 @@ export function ShopHeader({ title, lead, back, extra }: {
       title={title}
       lead={lead}
       actions={<>
-        {!back && <LinkButton href={routeHref({ name: 'orders' })} iconStart="history" variant="text">{t("My orders")}</LinkButton>}
+        {!back && <LinkButton href={routeHref({ name: 'requests', tab: 'orders' })} iconStart="history" variant="text">{t("Requests")}</LinkButton>}
         {extra}
         {/* Icon-only cart: the count sits in a badge on the top-right corner, as in most shop headers. */}
         <Tooltip content={t("Cart")} placement="bottom" className="shop-cart-tip">

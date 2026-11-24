@@ -1,16 +1,22 @@
 import { useState, type FormEvent } from 'react';
 import { Button, Card, Checkbox, Grid, GridItem, Section, Select, TextArea, TextField } from '@syn';
-import { COUNTRIES, CURRENT_USER, money, plural, stamp, type Order } from '../data';
-import { ProductArt, ShopHeader, Summary } from '../parts';
+import { COUNTRIES, CURRENT_USER, money, plural } from '../data';
+import { InfoNote, ProductArt, ShopHeader, Summary } from '../parts';
+import { CartNotices } from '../CartDrawer';
 import { routeHref, useShop } from '../store';
 import { t } from '../i18n';
 
+/**
+ * Prefilled from the account wherever it has the data: contact, email and phone, the delivery address and the
+ * company billing address. All of them stay editable; only the company is read-only.
+ */
 const initial = {
-  name: CURRENT_USER.name, email: 'john.smith@example.com', phone: '+49 421 123456',
-  street: 'Bauhofstraße 18', zip: '28195', city: 'Bremen', country: 'Germany',
-  billingAddress: '', billingZip: '', billingCity: '', billingCountry: 'Germany',
+  name: CURRENT_USER.name, email: CURRENT_USER.email, phone: CURRENT_USER.phone,
+  street: CURRENT_USER.street, zip: CURRENT_USER.zip, city: CURRENT_USER.city, country: CURRENT_USER.country,
+  billingAddress: CURRENT_USER.billing.street, billingZip: CURRENT_USER.billing.zip, billingCity: CURRENT_USER.billing.city, billingCountry: CURRENT_USER.billing.country,
   reference: '', comment: '',
 };
+const companyBilling = `${CURRENT_USER.billing.street}, ${CURRENT_USER.billing.zip} ${CURRENT_USER.billing.city}, ${CURRENT_USER.billing.country}`;
 type Form = typeof initial;
 type Field = keyof Form;
 
@@ -41,21 +47,25 @@ function validate(form: Form, billingSame: boolean) {
 }
 
 const nextSteps = [
-  ['Syniotec reviews your order', 'and confirms prices, stock and delivery costs.'],
+  ['Syniotec reviews your order request', 'and confirms prices, stock and delivery costs.'],
   ['You get a confirmation by email', 'with the delivery date. The invoice follows separately.'],
-  ['Track it in My orders', 'from confirmed to shipped and completed.'],
+  ['Track it under Requests', 'from confirmed to shipped and completed. Until it is confirmed you can cancel it there.'],
 ];
 
 export function CheckoutPage() {
-  const { cart, cartQty, cartTotal, orders, setOrders, setCart, setCartOpen, go, notify } = useShop();
+  const { cart, cartTotal, cartBlocked, submitOrder, setCartOpen, go, notify } = useShop();
   const [form, setForm] = useState(initial);
   const [billingSame, setBillingSame] = useState(true);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const orderable = cart.filter((l) => l.state === 'ok');
+  const orderQty = orderable.reduce((n, l) => n + l.qty, 0);
 
   if (!cart.length) {
     return (
       <>
-        <ShopHeader title={t("Your cart is empty")} lead={t("Add products to your cart, then come back here to send the order.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
+        <ShopHeader title={t("Your cart is empty")} lead={t("Add products to your cart, then come back here to send the order request.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
       </>
     );
   }
@@ -74,8 +84,28 @@ export function CheckoutPage() {
     />
   );
 
+  const send = async () => {
+    setSending(true);
+    setFailed(false);
+    try {
+      const id = await submitOrder({
+        contactName: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(),
+        address: `${form.street.trim()}, ${form.zip.trim()} ${form.city.trim()}, ${form.country}`,
+        billing: billingSame ? companyBilling : `${form.billingAddress.trim()}, ${form.billingZip.trim()} ${form.billingCity.trim()}, ${form.billingCountry.trim()}`,
+        reference: form.reference.trim(), comment: form.comment.trim(),
+      });
+      go({ name: 'confirmation', id });
+    } catch {
+      // Nothing was sent: the cart and the form stay as they are, and Try again sends the same request.
+      setFailed(true);
+      setSending(false);
+      notify(t("Your order request couldn’t be sent"), t("Nothing was sent and your cart is unchanged. Check your connection and try again."), 'error', { label: t("Try again"), run: () => void send() });
+    }
+  };
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (sending || cartBlocked) return;
     const found = validate(form, billingSame);
     setErrors(found);
     const count = Object.keys(found).length;
@@ -84,26 +114,12 @@ export function CheckoutPage() {
       document.querySelector<HTMLInputElement>('.shop-checkout [aria-invalid="true"]')?.focus();
       return;
     }
-    const now = stamp();
-    const id = `SO-${now.year}-${String(orders.length + 125).padStart(5, '0')}`;
-    const order: Order = {
-      id, date: now.date, time: now.time, orderedBy: CURRENT_USER.name, contactName: form.name.trim(),
-      email: form.email.trim(), phone: form.phone.trim(), org: CURRENT_USER.company,
-      items: cart.map((l) => ({ id: l.product.id, name: l.product.name, qty: l.qty, price: l.product.price, type: l.product.type, image: l.product.image })),
-      total: cartTotal, status: 'Submitted',
-      address: `${form.street.trim()}, ${form.zip.trim()} ${form.city.trim()}, ${form.country}`,
-      billing: billingSame ? 'Same as company billing address' : `${form.billingAddress.trim()}, ${form.billingZip.trim()} ${form.billingCity.trim()}, ${form.billingCountry.trim()}`,
-      reference: form.reference.trim(), comment: form.comment.trim(), internalNote: '',
-      history: [['Submitted', now.both]],
-    };
-    setOrders([order, ...orders]);
-    setCart([]);
-    go({ name: 'confirmation', id });
+    void send();
   };
 
   return (
     <>
-      <ShopHeader title={t("Submit order")} lead={t("Review your contact, delivery and billing information before sending the order to Syniotec.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
+      <ShopHeader title={t("Submit order request")} lead={t("You are sending an order request, not buying online. Syniotec reviews and confirms it before anything is delivered or invoiced.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
 
       <form className="shop-checkout" onSubmit={submit} noValidate>
         <div className="shop-checkout__main">
@@ -132,6 +148,7 @@ export function CheckoutPage() {
           <Section title={t("Billing & reference")}>
             <p className="shop-muted">{t("You pay by invoice after Syniotec confirms the order. No payment is taken here.")}</p>
             <Checkbox label={t("Use company billing address")} checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} />
+            {billingSame && <p className="shop-billing-preview">{companyBilling}</p>}
             {!billingSame && (
               <Grid gap={16}>
                 <GridItem span={12}>{field('billingAddress', 'Billing address *')}</GridItem>
@@ -152,18 +169,24 @@ export function CheckoutPage() {
         </div>
 
         <Card className="shop-order-summary" title={t("Order summary")} actions={<Button size="xs" variant="text" onClick={() => setCartOpen(true)}>{t("Edit cart")}</Button>}>
-          <p className="shop-muted">{plural(cartQty, 'item')} {t("in this order")}</p>
+          <p className="shop-muted">{plural(orderQty, 'item')} {t("in this order request")}</p>
+          <CartNotices />
           <ul className="shop-lines">
-            {cart.map((l) => (
+            {orderable.map((l) => (
               <li key={l.productId}>
-                <ProductArt src={l.product.image} type={l.product.type} alt="" size="xs" />
-                <span><strong>{l.product.name}</strong><span className="shop-muted">{l.qty} × {money(l.product.price)}</span></span>
-                <strong>{money(l.qty * l.product.price)}</strong>
+                <ProductArt src={l.product!.image} type={l.product!.type} alt="" size="xs" />
+                <span>
+                  <strong>{l.name}</strong>
+                  <span className="shop-muted">{l.qty} × {money(l.product!.price)}{l.priceChanged && <span className="shop-price-was">{t("was {0}", [money(l.price!)])}</span>}</span>
+                </span>
+                <strong>{money(l.qty * l.product!.price)}</strong>
               </li>
             ))}
           </ul>
           <Summary total={cartTotal} />
-          <Button type="submit" size="md" fullWidth>{t("Submit order ·")} {money(cartTotal)}</Button>
+          <InfoNote>{t("Prices are excl. VAT. No online payment: Syniotec reviews and confirms your request, then invoices separately.")}</InfoNote>
+          {failed && <InfoNote tone="warning">{t("The last attempt failed and nothing was sent. Submit again to retry.")}</InfoNote>}
+          <Button type="submit" size="md" fullWidth loading={sending} disabled={cartBlocked || !orderable.length}>{t("Submit order request ·")} {money(cartTotal)}</Button>
           <div className="shop-next">
             <span className="shop-eyebrow">{t("What happens next")}</span>
             <ol>

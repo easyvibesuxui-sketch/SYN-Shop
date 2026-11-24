@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Dialog, TextArea } from '@syn';
-import type { Product } from './data';
+import { CURRENT_USER, type Product } from './data';
 import { QuantityStepper } from './parts';
 import { useShop } from './store';
 import { t } from './i18n';
@@ -26,6 +26,7 @@ export function PriceRequestDialog({ product, onClose }: { product: Product | nu
             <span className="shop-field-label">{t("Quantity")}</span>
             <QuantityStepper label={product.name} value={qty} onChange={setQty} />
           </div>
+          <p className="shop-muted">{t("Syniotec replies to {0} at {1}. Everyone in your organisation can see the request under Requests.", [CURRENT_USER.name, CURRENT_USER.email])}</p>
           <TextArea label={t("Note for Syniotec")} hideLabel={false} labelPosition="outside" hint={t("Optional, e.g. delivery date or site")} rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
       )}

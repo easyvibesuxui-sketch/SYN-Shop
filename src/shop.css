@@ -204,6 +204,8 @@ html { scroll-behavior: smooth; }
 .shop-checkout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: var(--syn-space-24); align-items: start; }
 .shop-checkout__main { display: flex; flex-direction: column; gap: var(--syn-space-16); min-width: 0; }
 .shop-order-summary { position: sticky; top: 80px; gap: var(--syn-space-16); padding: var(--syn-space-24); }
+/* German "Warenkorb bearbeiten" next to the title: let the header wrap on narrow cards instead of overflowing. */
+.shop-order-summary .syn-card__header { flex-wrap: wrap; row-gap: var(--syn-space-4); }
 
 .shop-confirmation { align-items: center; gap: var(--syn-space-16); max-width: 560px; margin: var(--syn-space-48) auto 0; padding: var(--syn-space-48) var(--syn-space-40); text-align: center; }
 .shop-confirmation__mark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--syn-radius-full); background: var(--syn-status-success); color: var(--syn-color-white-white); }
@@ -816,3 +818,45 @@ html { scroll-behavior: smooth; }
    12 (Eerie Black), the text in Montserrat Regular 14. The library's own outside label is Regular 14 Jet. */
 .shop-app .syn-textarea--outside .syn-textarea__label { color: var(--syn-text-primary); font: var(--syn-type-titles-title-5); }
 .shop-app .syn-textarea--outside .syn-textarea__input { font: var(--syn-type-text-body-s-2); }
+
+/* ---- V1 scope ---- */
+
+/* Prototype-only panel (bottom-left): switches for application, access and review states. Kept visibly apart from the
+   product with a dashed outline. */
+.shop-proto { position: fixed; left: 72px; bottom: var(--syn-space-16); z-index: 30; display: flex; flex-direction: column; align-items: flex-start; gap: var(--syn-space-8); }
+.shop-proto__toggle { display: inline-flex; align-items: center; gap: var(--syn-space-6); height: 28px; padding: 0 var(--syn-space-12); border: 1px dashed var(--syn-border-muted); border-radius: var(--syn-radius-full); background: var(--syn-surface-default); color: var(--syn-text-secondary); font: var(--syn-type-text-body-xs); cursor: pointer; }
+.shop-proto__toggle:hover { border-color: var(--syn-border-strong); color: var(--syn-text-primary); }
+.shop-proto__panel { display: flex; flex-direction: column; gap: var(--syn-space-12); width: 300px; padding: var(--syn-space-16); border: 1px dashed var(--syn-border-muted); border-radius: var(--syn-radius-widget); background: var(--syn-surface-default); box-shadow: var(--syn-shadow-float); }
+.shop-proto__head { display: flex; flex-direction: column; gap: var(--syn-space-4); }
+.shop-proto__head strong { font: var(--syn-type-titles-title-4); }
+.shop-proto__row { display: flex; align-items: center; justify-content: space-between; gap: var(--syn-space-8); font: var(--syn-type-text-body-xs-2); }
+.shop-proto .syn-switch { font: var(--syn-type-text-body-xs-2); }
+.shop-proto__actions { display: flex; flex-direction: column; align-items: flex-start; gap: var(--syn-space-8); padding-top: var(--syn-space-4); border-top: 1px solid var(--syn-border-default); }
+@media (max-width: 760px) { .shop-proto { left: 56px; bottom: var(--syn-space-8); } }
+
+/* No Shop access: the explanation centred in the content area. */
+.shop-no-access { display: grid; place-items: center; min-height: 60vh; }
+
+/* Table skeleton while a list loads. */
+.shop-skeleton-table { display: flex; flex-direction: column; border: 1px solid var(--syn-border-default); border-radius: var(--syn-radius-widget); background: var(--syn-surface-default); }
+.shop-skeleton-table__row { display: flex; gap: var(--syn-space-24); align-items: center; height: 56px; padding: 0 var(--syn-space-16); border-bottom: 1px solid var(--syn-border-default); }
+.shop-skeleton-table__row:last-child { border-bottom: 0; }
+
+/* Requests: the two tabs above the toolbar. */
+.shop-requests__tabs { margin-bottom: var(--syn-space-16); }
+/* Timeline: a rejected or cancelled order ends on a red step; a reason or tracking number sits under its step. */
+.shop-timeline li.is-stopped::before { border-color: var(--syn-text-error); background: var(--syn-text-error); box-shadow: inset 0 0 0 2px var(--syn-surface-default); }
+.shop-timeline .shop-timeline__extra { color: var(--syn-text-primary); font: var(--syn-type-text-body-xs-2); }
+/* An order line whose product is no longer offered. */
+.shop-line-flag { align-self: flex-start; margin-top: var(--syn-space-4); padding: 0 var(--syn-space-8); border-radius: var(--syn-radius-full); background: var(--syn-surface-muted); color: var(--syn-text-secondary); font: var(--syn-type-text-body-xs-2); line-height: 20px; }
+/* Cart lines that can't be ordered: faded picture and text, the reason in the error colour. */
+.shop-cart__line.is-blocked .shop-art, .shop-cart__line.is-blocked > strong { opacity: 0.5; }
+.shop-line-problem { color: var(--syn-text-error); font: var(--syn-type-text-body-xs-2); }
+.shop-price-was { margin-left: var(--syn-space-6); color: var(--syn-text-muted); text-decoration: line-through; }
+/* Checkout: the company billing address shown under its checkbox, so the customer sees what will be used. */
+.shop-billing-preview { margin: calc(-1 * var(--syn-space-4)) 0 0 var(--syn-space-32); color: var(--syn-text-secondary); font: var(--syn-type-text-body-s-2); }
+/* Product card placeholder while the catalogue loads. */
+.shop-card--skeleton { pointer-events: none; }
+.shop-card--skeleton .shop-card__body { display: flex; flex-direction: column; gap: var(--syn-space-8); }
+/* The card's add button when the product is temporarily unavailable. */
+.shop-card__fab:disabled { color: var(--syn-text-disabled); cursor: not-allowed; transform: none; border-color: var(--syn-border-default); }

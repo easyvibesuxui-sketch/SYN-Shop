@@ -21,9 +21,11 @@ export function parseQuickOrder(text: string, products: Product[]): Parsed[] {
     const m = line.match(/^(.*?)[\s,;:x×*]*(\d+)\s*(?:pcs|pc|st)?\.?$/i);
     const key = normalise((m ? m[1] : line).replace(/[,;:]+$/, '').trim());
     const qty = m ? Math.min(999, Number(m[2])) : 1;
-    const product = products.find((p) => p.active && (normalise(p.id) === key || normalise(p.name) === key));
-    if (!product) return { line, qty, problem: 'Unknown SKU' };
-    if (!canOrder(product)) return { line, product, qty, problem: product.price > 0 ? 'Unavailable' : 'Price on request' };
+    // Drafts are not public, so they read as unknown; archived products say they are no longer offered.
+    const product = products.find((p) => p.status !== 'Draft' && (normalise(p.id) === key || normalise(p.name) === key));
+    if (!product) return { line, qty, problem: 'SKU not found' };
+    if (product.status === 'Archived') return { line, product, qty, problem: 'No longer offered' };
+    if (!canOrder(product)) return { line, product, qty, problem: product.availability === 'Temporarily unavailable' ? 'Temporarily unavailable' : 'Price on request' };
     if (!qty) return { line, product, qty, problem: 'Quantity is 0' };
     return { line, product, qty };
   });

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Checkbox, EmptyState, Icon, IconButton, Table, Tag, TextField, Tooltip } from '@syn';
+import { Button, Checkbox, EmptyState, Icon, IconButton, Skeleton, Table, Tag, TextField, Tooltip } from '@syn';
 import { cx } from '@syn/utils';
 import {
-  FEATURED_ORDER, POWER_OPTIONS, canOrder, hasPrice, plural, priceLabel, suitableFor, suitableTerms,
+  FEATURED_ORDER, POWER_OPTIONS, canOrder, hasPrice, isListed, plural, priceLabel, suitableFor, suitableTerms,
   type Availability, type Category, type Power, type Product,
 } from '../data';
 import { PriceRequestDialog } from '../PriceRequest';
 import { QuickOrder } from '../QuickOrder';
-import { AvailabilityBadge, Chips, ProductArt, QuantityStepper, ShopHeader } from '../parts';
-import { routeHref, useShop } from '../store';
+import { AvailabilityBadge, Chips, LoadError, ProductArt, QuantityStepper, ShopHeader } from '../parts';
+import { routeHref, useLoad, useShop } from '../store';
 import { TermIcon } from '../termIcons';
 import { t } from '../i18n';
 
@@ -22,8 +22,10 @@ interface Filters {
   power: Power[];
   connectivity: string[];
   availability: Availability[];
+  pricing: Pricing[];
 }
-const noFilters: Filters = { category: [], use: [], power: [], connectivity: [], availability: [] };
+type Pricing = 'Fixed price' | 'Price on request';
+const noFilters: Filters = { category: [], use: [], power: [], connectivity: [], availability: [], pricing: [] };
 
 const sortOptions = [
   { value: 'featured', label: 'Most relevant' },
@@ -40,6 +42,7 @@ function matches(p: Product, f: Filters, q: string) {
   if (f.power.length && !(p.power && f.power.includes(p.power))) return false;
   if (f.connectivity.length && !f.connectivity.some((c) => p.connectivity?.includes(c))) return false;
   if (f.availability.length && !f.availability.includes(p.availability)) return false;
+  if (f.pricing.length && !f.pricing.includes(hasPrice(p) ? 'Fixed price' : 'Price on request')) return false;
   if (!q) return true;
   return [p.name, p.id, p.short, p.description, ...(p.connectivity ?? []), suitableFor(p) ?? ''].some((v) => v.toLowerCase().includes(q));
 }
@@ -57,7 +60,7 @@ function sortProducts(list: Product[], sort: Sort) {
 function BuyControls({ product: p, onRequest, compact }: { product: Product; onRequest: (p: Product) => void; compact?: boolean }) {
   const { addToCart } = useShop();
   const [qty, setQty] = useState(1);
-  if (p.availability === 'Temporarily unavailable') return <Button size="sm" disabled>{t("Unavailable")}</Button>;
+  if (p.availability === 'Temporarily unavailable') return <Button size="sm" disabled>{t("Temporarily unavailable")}</Button>;
   if (!canOrder(p)) return <Button size="sm" variant="secondary" iconStart="mail" onClick={() => onRequest(p)}>{t("Request price")}</Button>;
   return (
     <div className={cx('shop-buy-controls', compact && 'is-compact')}>
@@ -72,7 +75,13 @@ function BuyControls({ product: p, onRequest, compact }: { product: Product; onR
 function CardBuy({ product: p, onRequest }: { product: Product; onRequest: (p: Product) => void }) {
   const { cart, addToCart, setQty, removeFromCart } = useShop();
   const inCart = cart.find((l) => l.productId === p.id)?.qty ?? 0;
-  if (p.availability === 'Temporarily unavailable') return null;
+  if (p.availability === 'Temporarily unavailable') {
+    return (
+      <Tooltip content={t("Temporarily unavailable")} placement="left">
+        <button type="button" className="shop-card__fab" aria-label={t("{0} is temporarily unavailable", [p.name])} disabled><Icon name="plus" size={20} /></button>
+      </Tooltip>
+    );
+  }
   if (!canOrder(p)) {
     return (
       <Tooltip content={t("Request a price")} placement="left">
@@ -132,7 +141,7 @@ function ProductCard({ product: p, onRequest }: { product: Product; onRequest: (
       <div className="shop-card__foot">
         <div className="shop-card__price">
           <span className="shop-price">{priceLabel(p)}</span>
-          <span className="shop-tax">{hasPrice(p) ? t("per item, excl. VAT") : t("quoted for your quantity")}</span>
+          <span className="shop-tax">{p.availability === 'Temporarily unavailable' ? t("can’t be ordered right now") : hasPrice(p) ? t("per item, excl. VAT") : t("quoted for your quantity")}</span>
         </div>
       </div>
     </article>
@@ -336,7 +345,7 @@ function TermBar({ terms, selected, onToggle, onAll }: { terms: string[]; select
 
 const steps: Array<[string, string]> = [
   ['Add products', 'Choose hardware and tags and set quantities.'],
-  ['Submit the order', 'No online payment. You send an order request.'],
+  ['Submit an order request', 'No online payment. Prices are excl. VAT.'],
   ['Syniotec confirms', 'Prices, delivery and invoice follow by email.'],
 ];
 
@@ -349,8 +358,10 @@ export function ShopPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [quick, setQuick] = useState(false);
   const [requesting, setRequesting] = useState<Product | null>(null);
+  const load = useLoad('catalogue');
 
-  const active = useMemo(() => products.filter((p) => p.active), [products]);
+  // Only published products are shown; drafts and archived products stay in DMS Admin.
+  const active = useMemo(() => products.filter(isListed), [products]);
   const q = search.trim().toLowerCase();
   const list = useMemo(() => sortProducts(active.filter((p) => matches(p, filters, q)), sort), [active, filters, q, sort]);
 
@@ -376,6 +387,7 @@ export function ShopPage() {
     ...filters.power.map((v): [string, () => void] => [v, () => set('power')(filters.power.filter((x) => x !== v))]),
     ...filters.connectivity.map((v): [string, () => void] => [v, () => set('connectivity')(filters.connectivity.filter((x) => x !== v))]),
     ...filters.availability.map((v): [string, () => void] => [v, () => set('availability')(filters.availability.filter((x) => x !== v))]),
+    ...filters.pricing.map((v): [string, () => void] => [v, () => set('pricing')(filters.pricing.filter((x) => x !== v))]),
   ];
   const clearAll = () => { setFilters(noFilters); setSearch(''); };
 
@@ -415,7 +427,8 @@ export function ShopPage() {
           <FilterGroup<string> title={t("Suitable for")} options={terms} selected={filters.use} onChange={set('use')} counts={(o) => countWith('use', o)} total={countAll('use')} limit={6} />
           <FilterGroup<Power> title={t("Power source")} options={POWER_OPTIONS} selected={filters.power} onChange={set('power')} counts={(o) => countWith('power', o)} total={countAll('power')} />
           <FilterGroup<string> title={t("Connectivity")} options={CONNECTIVITY} selected={filters.connectivity} onChange={set('connectivity')} counts={(o) => countWith('connectivity', o)} total={countAll('connectivity')} />
-          <FilterGroup<Availability> title={t("Availability")} options={['Available', 'Available on request']} selected={filters.availability} onChange={set('availability')} counts={(o) => countWith('availability', o)} total={countAll('availability')} />
+          <FilterGroup<Availability> title={t("Availability")} options={['Available', 'Available on request', 'Temporarily unavailable']} selected={filters.availability} onChange={set('availability')} counts={(o) => countWith('availability', o)} total={countAll('availability')} />
+          <FilterGroup<Pricing> title={t("Price")} options={['Fixed price', 'Price on request']} selected={filters.pricing} onChange={set('pricing')} counts={(o) => countWith('pricing', o)} total={countAll('pricing')} />
         </aside>
 
         <section className="shop-results" aria-labelledby="results-title">
@@ -430,7 +443,7 @@ export function ShopPage() {
               onChange={(e) => setSearch(e.target.value)}
               onClear={() => setSearch('')}
             />
-            <h2 id="results-title" className="shop-results__count" aria-live="polite">{plural(list.length, 'product')}</h2>
+            <h2 id="results-title" className="shop-results__count" aria-live="polite">{load.state === 'ready' ? plural(list.length, 'product') : ''}</h2>
             <div className="shop-results__tools">
               <SortMenu value={sort} onChange={setSort} />
               <ViewSwitch value={view} onChange={setView} />
@@ -442,19 +455,31 @@ export function ShopPage() {
             </div>
           )}
 
-          {!list.length && (
+          {load.state === 'loading' && (
+            <div className="shop-cards" role="status" aria-label={t("Loading products")}>
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="shop-card shop-card--skeleton">
+                  <Skeleton variant="rectangular" height={180} />
+                  <div className="shop-card__body"><Skeleton width="30%" /><Skeleton width="50%" height={24} /><Skeleton width="90%" /><Skeleton width="70%" /></div>
+                </div>
+              ))}
+            </div>
+          )}
+          {load.state === 'error' && <LoadError what={t("Products")} onRetry={load.retry} />}
+
+          {load.state === 'ready' && !list.length && (
             <EmptyState icon="search" action={<Button size="sm" variant="secondary" onClick={clearAll}>{t("Clear filters")}</Button>}>
               {t("No products found. Try a different search or fewer filters.")}
             </EmptyState>
           )}
 
-          {list.length > 0 && view === 'grid' && (
+          {load.state === 'ready' && list.length > 0 && view === 'grid' && (
             <div className="shop-cards">
               {list.map((p) => <ProductCard key={p.id} product={p} onRequest={setRequesting} />)}
             </div>
           )}
 
-          {list.length > 0 && view === 'table' && (
+          {load.state === 'ready' && list.length > 0 && view === 'table' && (
             <Table
               caption={t("Products")}
               className="shop-table shop-product-table"

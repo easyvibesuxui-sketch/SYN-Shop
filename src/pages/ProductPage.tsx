@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Card, FileItem, Icon, Section } from '@syn';
 import { cx } from '@syn/utils';
-import { canOrder, hasPrice, money, priceLabel } from '../data';
+import { canOrder, hasPrice, isListed, money, priceLabel } from '../data';
 import { PriceRequestDialog } from '../PriceRequest';
 import { AvailabilityBadge, Chips, InfoNote, ProductArt, QuantityStepper, ShopHeader, SpecList } from '../parts';
 import { routeHref, useShop } from '../store';
@@ -10,14 +10,14 @@ import { t } from '../i18n';
 export function ProductPage({ id }: { id: string }) {
   const { products, addToCart, notify, cart } = useShop();
   const [requesting, setRequesting] = useState(false);
-  const p = products.find((x) => x.id === id && x.active);
+  const p = products.find((x) => x.id === id && isListed(x));
   const [qty, setQty] = useState(1);
   const [shown, setShown] = useState(0);
 
   if (!p) {
     return (
       <>
-        <ShopHeader title={t("Product not found")} lead={t("This product is no longer in the catalogue. It may have been renamed or removed.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
+        <ShopHeader title={t("Product not available")} lead={t("This product is no longer offered in the Shop. Earlier orders that contain it are still listed under Requests.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
       </>
     );
   }
@@ -103,6 +103,9 @@ export function ProductPage({ id }: { id: string }) {
           </>) : (
             <Button size="md" fullWidth variant="secondary" iconStart="mail" onClick={() => setRequesting(true)}>{t("Request a price")}</Button>
           )}
+          {p.availability === 'Available on request' && hasPrice(p) && <InfoNote>{t("Out of stock right now. You can still order it; Syniotec confirms the delivery date.")}</InfoNote>}
+          {!hasPrice(p) && !unavailable && <InfoNote>{t("This product has no published price. Request a price and Syniotec replies by email; ordering opens once a price is published.")}</InfoNote>}
+          {unavailable && <InfoNote tone="warning">{t("This product can’t be ordered right now. Check back later or contact Syniotec.")}</InfoNote>}
           {inCart > 0 && <p className="shop-in-cart"><Icon name="check" size={16} />{inCart} {t("already in your cart")}</p>}
           <InfoNote>{t("Ordering doesn’t add devices to your equipment yet. They appear in the platform once they are installed and commissioned.")}</InfoNote>
         </Card>
