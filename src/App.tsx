@@ -2,7 +2,7 @@ import { Button, Icon, Notification, Tooltip, type IconName } from '@syn';
 import { cx } from '@syn/utils';
 import { TopbarActions } from './UserMenu';
 import { CartDrawer } from './CartDrawer';
-import { LineIcon } from './parts';
+import { ShopNavIcon } from './parts';
 import { AdminPage } from './pages/AdminPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { ConfirmationPage } from './pages/ConfirmationPage';
@@ -28,11 +28,11 @@ function Rail({ route }: { route: Route }) {
     <Tooltip key={label} content={t(label)} placement="right">
       {opts.href ? (
         <a href={opts.href} className={cx('shop-rail__item', opts.active && 'is-active')} aria-label={t(label)} aria-current={opts.active ? 'page' : undefined}>
-          {icon === 'bag' ? <LineIcon name="bag" /> : <Icon name={icon} size={20} />}
+          {icon === 'bag' ? <ShopNavIcon /> : <Icon name={icon} size={20} />}
         </a>
       ) : (
         <button type="button" className="shop-rail__item" aria-label={t(label)} onClick={outside(t(label))}>
-          {icon === 'bag' ? <LineIcon name="bag" /> : <Icon name={icon} size={20} />}
+          {icon === 'bag' ? <ShopNavIcon /> : <Icon name={icon} size={20} />}
         </button>
       )}
     </Tooltip>
