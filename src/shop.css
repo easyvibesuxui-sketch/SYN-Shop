@@ -119,20 +119,6 @@ html { scroll-behavior: smooth; }
 
 /* ===== Shop landing ===== */
 
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 40%;
-  gap: var(--syn-space-16);
-  align-items: stretch;
-  padding: var(--syn-space-16);
-  border: 1px solid var(--syn-border-default);
-  border-radius: var(--syn-radius-widget);
-  background: var(--syn-surface-default);
-  color: var(--syn-text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--syn-duration-fast), box-shadow var(--syn-duration-fast);
-}
 
 
 .shop-section-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--syn-space-8); }
