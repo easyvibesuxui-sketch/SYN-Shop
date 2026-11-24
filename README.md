@@ -29,7 +29,7 @@ The build uses relative paths, so `dist/` works from any folder or static host (
 
 ## Syn design system
 
-`syn/` is a copy of `src/` from [Syn-Design-System](https://github.com/easyvibesuxui-sketch/Syn-Design-System), taken from commit `f8f7fa6` on branch `claude/eager-hopper-ji8for`. That commit also changed `src/components/Select.css` (option padding and type sizes, a thin scrollbar).
+`syn/` is a copy of `src/` from [Syn-Design-System](https://github.com/easyvibesuxui-sketch/Syn-Design-System), taken from commit `f8f7fa6` on branch `claude/eager-hopper-ji8for`. That commit also changed `src/components/Select.css` (option padding and type sizes, a thin scrollbar). `syn/icons/icon-data.ts` is newer: it comes from commit `0a5abac`, which added the `nav-shop` icon used for Shop in the rail.
 
 To take a newer library version, replace `syn/` with that repository's `src/` folder, then run `npm run build`.
 

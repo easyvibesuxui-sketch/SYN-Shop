@@ -2,7 +2,6 @@ import { Button, Icon, Notification, Tooltip, type IconName } from '@syn';
 import { cx } from '@syn/utils';
 import { TopbarActions } from './UserMenu';
 import { CartDrawer } from './CartDrawer';
-import { ShopNavIcon } from './parts';
 import { AdminPage } from './pages/AdminPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { ConfirmationPage } from './pages/ConfirmationPage';
@@ -24,15 +23,15 @@ const crumbs: Record<Route['name'], string> = {
 function Rail({ route }: { route: Route }) {
   const { notify } = useShop();
   const outside = (label: string) => () => notify(label, t("{0} is outside this Shop prototype.", [label]), 'info');
-  const item = (icon: IconName | 'bag', label: string, opts: { href?: string; active?: boolean } = {}) => (
+  const item = (icon: IconName, label: string, opts: { href?: string; active?: boolean } = {}) => (
     <Tooltip key={label} content={t(label)} placement="right">
       {opts.href ? (
         <a href={opts.href} className={cx('shop-rail__item', opts.active && 'is-active')} aria-label={t(label)} aria-current={opts.active ? 'page' : undefined}>
-          {icon === 'bag' ? <ShopNavIcon /> : <Icon name={icon} size={20} />}
+          <Icon name={icon} size={20} />
         </a>
       ) : (
         <button type="button" className="shop-rail__item" aria-label={t(label)} onClick={outside(t(label))}>
-          {icon === 'bag' ? <ShopNavIcon /> : <Icon name={icon} size={20} />}
+          <Icon name={icon} size={20} />
         </button>
       )}
     </Tooltip>
@@ -44,7 +43,7 @@ function Rail({ route }: { route: Route }) {
       {item('kanban', 'Dashboard')}
       {item('truck', 'Equipment')}
       {item('calendar', 'Bookings')}
-      {item('bag', 'Shop', { href: routeHref({ name: 'shop' }), active: route.name !== 'admin' })}
+      {item('nav-shop', 'Shop', { href: routeHref({ name: 'shop' }), active: route.name !== 'admin' })}
       <span className="shop-rail__spacer" />
       {item('settings', 'Shop Admin', { href: routeHref({ name: 'admin', tab: 'overview' }), active: route.name === 'admin' })}
     </nav>
