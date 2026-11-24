@@ -810,8 +810,6 @@ html { scroll-behavior: smooth; }
    ("Warenkorb") stays on screen. The arrow still points at the icon's centre. */
 .shop-cart-tip .syn-tooltip__bubble--bottom { right: 0; left: auto; transform: none; }
 .shop-cart-tip .syn-tooltip__bubble--bottom::after { right: 10px; left: auto; margin-left: 0; }
-/* A heavier Syn icon drawn smaller inside the same 32 px box, so the labels under the row stay level. */
-.shop-term-icon--inset { box-sizing: border-box; padding: 3px; }
 
 /* Outside labels on text areas keep the Shop's agreed look after the library update: the label in ABC Favorit Medium
    12 (Eerie Black), the text in Montserrat Regular 14. The library's own outside label is Regular 14 Jet. */
