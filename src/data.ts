@@ -454,7 +454,7 @@ export const suitableFor = (p: Pick<Product, 'specs'>) => p.specs.find(([k]) => 
 
 /**
  * Phrases in the "Suitable for" texts that name two things at once and would otherwise repeat a value that also stands
- * on its own ("Construction machinery" sat inside four different values, "Special machines" inside two). They are
+ * on its own ("Construction machinery" sat inside four different values, "Special machines" and "Attachments" inside two). They are
  * split into the things they name, using only the words of the text; everything else stays exactly as written.
  */
 const compoundTerms: Record<string, string[]> = {
@@ -462,6 +462,8 @@ const compoundTerms: Record<string, string[]> = {
   'construction & agricultural machinery': ['Construction machinery', 'Agricultural machinery'],
   'construction machinery & vehicles': ['Construction machinery', 'Construction vehicles'],
   'tractor units & special machines': ['Tractor units', 'Special machines'],
+  'attachments & medium-sized devices': ['Attachments', 'Medium-sized devices'],
+  'attachments & smaller mobile assets': ['Attachments', 'Smaller mobile assets'],
 };
 
 /**

@@ -15,7 +15,7 @@ const synRules: Array<[RegExp, IconName]> = [
   [/agricultural/i, 'categories'],
   [/large equipment/i, 'equipment'],
   [/^construction machinery$/i, 'navbar-2'],
-  [/mobile assets/i, 'inventory'],
+  [/^smaller mobile assets$/i, 'inventory'],
   [/tools/i, 'maintenance'],
 ];
 
@@ -32,6 +32,7 @@ const drawn: Record<string, { fit: Fit; base: string; accent: string }> = {
   engine: { fit: [1.045, -0.45, -0.76], base: `<rect x="2.4" y="6" width="15.2" height="8" rx="1"/><path d="M1.6 16.4h16.8M4.4 14v2.4M15.6 14v2.4"/><path d="M10.8 8.6h4.6M10.8 10h4.6M10.8 11.4h4.6"/><path d="M13.6 6V3.6h2.2"/>`, accent: `<rect x="4.4" y="8.2" width="4.2" height="3.6" rx=".5"/>` },
   caravan: { fit: [1.028, 0.08, -0.47], base: `<rect x="4.6" y="4.8" width="13.6" height="7.8" rx=".9"/><path d="M8.6 6.6v4.2M12.6 6.6v4.2M16.4 6.6v4.2"/><path d="M4.6 12.6h4.4M13.4 12.6h4.8"/><circle cx="11.2" cy="14.4" r="2"/><circle cx="11.2" cy="14.4" r="0.6"/>`, accent: `<path d="M4.6 11.2 2 12.8"/><circle cx="1.6" cy="13" r=".5"/>` },
   container: { fit: [1.069, -0.69, -0.1], base: `<rect x="1.8" y="4.6" width="16.4" height="10.8" rx=".9"/><path d="M1.8 6.6h16.4M1.8 13.4h16.4"/><path d="M5 8.2v3.6M7.6 8.2v3.6M10.2 8.2v3.6M12.8 8.2v3.6"/>`, accent: `<path d="M15.4 8.2v3.6"/><path d="M16.6 9.4v1.2"/>` },
+  mixer: { fit: [1.019, -0.09, 0.27], base: `<path d="M3 13.6h10.4"/><path d="M5 13.6v3"/><path d="M13.4 13.6l3.4-3"/><path d="M9.4 11.2v2.4"/><circle cx="13.2" cy="15.2" r="1.7"/><circle cx="13.2" cy="15.2" r="0.6"/>`, accent: `<path d="M3.6 9.6 4.9 5.4a1 1 0 0 1 .7-.67l6.3-1.9a1 1 0 0 1 1.18.53l1.9 4a1 1 0 0 1-.38 1.27l-5.4 3.3a1 1 0 0 1-.85.1l-4.1-1.3a1 1 0 0 1-.65-1.23z"/><path d="M13.2 3.2l2.3-1"/><path d="M7 5.6l2.6 4.6"/>` },
   shovel: { fit: [1.0, 0.1, 0.72], base: `<path d="M14.9 2.6l2.5 2.5"/><path d="M16.15 3.85 10.9 9.1"/>`, accent: `<path d="M9.6 8.4l2 2a.8.8 0 0 1 0 1.13l-3.4 3.4a3.4 3.4 0 0 1-4.8 0 3.4 3.4 0 0 1 0-4.8l3.4-3.4a.8.8 0 0 1 1.13 0z"/>` },
   'truck-delivery': { fit: [1.022, -0.22, -0.27], base: `<path d="M3.2 13.6h-1a.8.8 0 0 1-.8-.8V6.2a1.4 1.4 0 0 1 1.4-1.4h9.7a1.2 1.2 0 0 1 .94.45L16.6 8.8l1.4.6a1 1 0 0 1 .6.92V12.8a.8.8 0 0 1-.8.8h-1"/><path d="M7.2 13.6h5.4"/><path d="M9 9.4v2.6"/><circle cx="5.2" cy="14.4" r="1.9"/><circle cx="5.2" cy="14.4" r="0.6"/><circle cx="14.6" cy="14.4" r="1.9"/><circle cx="14.6" cy="14.4" r="0.6"/>`, accent: `<path d="M3.2 6.8H8v2.6H3.2zM9.8 6.8h2.7l1.9 2.6H9.8z"/>` },
   car: { fit: [1.022, -0.22, 0.34], base: `<path d="M3.4 13.6H2.2a.8.8 0 0 1-.8-.8v-1.6a1.6 1.6 0 0 1 1.3-1.57L5.4 9.1l2.5-2.75a1.6 1.6 0 0 1 1.18-.52h3.5a1.6 1.6 0 0 1 1.2.54L16 9.1l1.3.23A1.6 1.6 0 0 1 18.6 10.9v1.9a.8.8 0 0 1-.8.8h-1.2"/><path d="M7.2 13.6h5.6"/><circle cx="5.3" cy="13.9" r="1.8"/><circle cx="5.3" cy="13.9" r="0.6"/><circle cx="14.7" cy="13.9" r="1.8"/><circle cx="14.7" cy="13.9" r="0.6"/>`, accent: `<path d="M7.2 9.1l1.8-2h1.5v2zM12 7.1h.6a.6.6 0 0 1 .45.2l1.6 1.8H12z"/>` },
@@ -52,7 +53,8 @@ const rules: Array<[RegExp, string]> = [
   [/pump|generator/i, 'engine'],
   [/trailer/i, 'caravan'],
   [/container/i, 'container'],
-  [/attachments & medium/i, 'shovel'],
+  [/^attachments$/i, 'shovel'],
+  [/medium-sized devices/i, 'mixer'],
   [/chain/i, 'link'],
 ];
 
