@@ -1,9 +1,22 @@
+import { Icon, type IconName } from '@syn';
+import { cx } from '@syn/utils';
+
 /*
- * Outline icons for the Suitable-for bar, from Tabler Icons (MIT, https://tabler.io/icons). Syn's own set has no
- * construction machines or vehicles, so these fill the gap. Only the picture is chosen here; every label stays the
- * product's own "Suitable for" text. Drawn like syniotec.com's icons: a thin outline with sharp corners, Silver Chalice at rest, black with one detail in
- * brand red once selected.
+ * Icons for the Suitable-for bar. Where Syn's own set has a matching picture (dozer, compactor, tractor, boxes, wrench,
+ * ignition key) the row uses it; the rest come from Tabler Icons (MIT, https://tabler.io/icons), as Syn has
+ * no trailers, cranes, forklifts, pumps or chains, and its truck is too slim to read at this size. Only the picture is chosen here; every label stays the product's
+ * own "Suitable for" text. Silver Chalice at rest, black once selected; the Tabler icons add one detail in brand red.
  */
+/** Syn icons, checked before the Tabler rules below. */
+const synRules: Array<[RegExp, IconName]> = [
+  [/driver cab/i, 'ignition-key'],
+  [/agricultural/i, 'categories'],
+  [/large equipment/i, 'equipment'],
+  [/^construction machinery$/i, 'navbar-2'],
+  [/mobile assets/i, 'inventory'],
+  [/tools/i, 'maintenance'],
+];
+
 const paths: Record<string, string[]> = {
   bulldozer: ['M2 17a2 2 0 1 0 4 0a2 2 0 0 0 -4 0', 'M12 17a2 2 0 1 0 4 0a2 2 0 0 0 -4 0', 'M19 13v4a2 2 0 0 0 2 2h1', 'M14 19h-10', 'M4 15h10', 'M9 11v-5h2a3 3 0 0 1 3 3v6', 'M5 15v-3a1 1 0 0 1 1 -1h8', 'M19 17h-3'],
   backhoe: ['M2 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', 'M11 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', 'M13 19l-9 0', 'M4 15l9 0', 'M8 12v-5h2a3 3 0 0 1 3 3v5', 'M5 15v-2a1 1 0 0 1 1 -1h7', 'M21.12 9.88l-3.12 -4.88l-5 5', 'M21.12 9.88a3 3 0 0 1 -2.12 5.12a3 3 0 0 1 -2.12 -.88l4.24 -4.24'],
@@ -56,6 +69,9 @@ const rules: Array<[RegExp, string]> = [
 ];
 
 export function TermIcon({ term, size = 32 }: { term: string | null; size?: number }) {
+  const syn = term === null ? undefined : synRules.find(([re]) => re.test(term))?.[1];
+  // The Syn wrench is drawn heavier and fills its box, so it is drawn smaller inside the same box (labels stay level).
+  if (syn) return <Icon name={syn} size={size} className={cx('shop-term-icon', syn === 'maintenance' && 'shop-term-icon--inset')} />;
   const key = term === null ? 'all' : rules.find(([re]) => re.test(term))?.[1] ?? 'all';
   return (
     <svg className="shop-term-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} strokeLinecap="square" strokeLinejoin="miter" aria-hidden>

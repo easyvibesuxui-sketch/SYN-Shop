@@ -805,3 +805,10 @@ html { scroll-behavior: smooth; }
 
 /* Drawer footers: 36px buttons (library sm). The text action (Cancel, Close…) gets the same 36px height so both line up. */
 .syn-drawer__footer .syn-button--text { box-sizing: border-box; height: var(--syn-size-control-sm); padding-block: 0; }
+
+/* The cart sits at the page's right edge: its tooltip opens leftwards from the button's right edge, so a longer label
+   ("Warenkorb") stays on screen. The arrow still points at the icon's centre. */
+.shop-cart-tip .syn-tooltip__bubble--bottom { right: 0; left: auto; transform: none; }
+.shop-cart-tip .syn-tooltip__bubble--bottom::after { right: 10px; left: auto; margin-left: 0; }
+/* A heavier Syn icon drawn smaller inside the same 32 px box, so the labels under the row stay level. */
+.shop-term-icon--inset { box-sizing: border-box; padding: 3px; }

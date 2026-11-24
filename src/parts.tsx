@@ -107,7 +107,7 @@ export function ShopHeader({ title, lead, back, extra }: {
         {!back && <LinkButton href={routeHref({ name: 'orders' })} iconStart="history" variant="text">{t("My orders")}</LinkButton>}
         {extra}
         {/* Icon-only cart: the count sits in a badge on the top-right corner, as in most shop headers. */}
-        <Tooltip content={t("Cart")} placement="bottom">
+        <Tooltip content={t("Cart")} placement="bottom" className="shop-cart-tip">
           <button type="button" className="shop-cart-button" onClick={() => setCartOpen(true)} aria-label={cartQty ? t("Cart, {0}", [plural(cartQty, 'item')]) : t("Cart")}>
             <LineIcon name="cart" size={20} />
             {cartQty > 0 && <span className="shop-count" aria-hidden>{cartQty > 99 ? '99+' : cartQty}</span>}
