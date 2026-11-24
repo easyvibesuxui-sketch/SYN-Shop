@@ -453,11 +453,26 @@ export function stamp(now = new Date()) {
 export const suitableFor = (p: Pick<Product, 'specs'>) => p.specs.find(([k]) => k === 'Suitable for')?.[1];
 
 /**
- * The "Suitable for" text split at its commas into filter values, e.g. "Trailers, containers, pumps & generators"
- * becomes Trailers / Containers / Pumps & generators. Nothing is renamed or grouped; only the first letter is capitalised.
+ * Phrases in the "Suitable for" texts that name two things at once and would otherwise repeat a value that also stands
+ * on its own ("Construction machinery" sat inside four different values, "Special machines" inside two). They are
+ * split into the things they name, using only the words of the text; everything else stays exactly as written.
+ */
+const compoundTerms: Record<string, string[]> = {
+  'construction machinery and large equipment': ['Construction machinery', 'Large equipment'],
+  'construction & agricultural machinery': ['Construction machinery', 'Agricultural machinery'],
+  'construction machinery & vehicles': ['Construction machinery', 'Construction vehicles'],
+  'tractor units & special machines': ['Tractor units', 'Special machines'],
+};
+
+/**
+ * The "Suitable for" text split into filter values: at its commas, then the compound phrases above, without repeats.
+ * "Trucks, tractor units & special machines" becomes Trucks / Tractor units / Special machines. Only the first letter is
+ * capitalised; the product page keeps showing the full text.
  */
 export function suitableTerms(p: Pick<Product, 'specs'>): string[] {
   const text = suitableFor(p);
   if (!text) return [];
-  return text.split(',').map((t) => t.trim()).filter(Boolean).map((t) => t[0].toUpperCase() + t.slice(1));
+  const parts = text.split(',').map((t) => t.trim()).filter(Boolean)
+    .flatMap((t) => compoundTerms[t.toLowerCase()] ?? [t[0].toUpperCase() + t.slice(1)]);
+  return [...new Set(parts)];
 }

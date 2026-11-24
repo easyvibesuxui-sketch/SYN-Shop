@@ -1,10 +1,11 @@
-import { Icon, type IconName } from '@syn';
+import { useId } from 'react';
+import { getIcon, type IconName } from '@syn';
 import { cx } from '@syn/utils';
 
 /*
  * Icons for the Suitable-for bar. Syn's own icons come first where the set has the picture (dozer, compactor, tractor,
  * boxes, wrench, ignition key). Syn has no trucks, cranes, forklifts, trailers, containers, generators or chains, so
- * those are drawn here in Syn's style: the same 20 × 20 grid, a 1.1 outline with round caps and joins, side views with
+ * those are drawn here in Syn's style: the same 20 × 20 grid, an outline with round caps and joins, side views with
  * rounded cab windows and wheels with a hub ring, as in the Syn equipment, compactor and tractor icons. One ink:
  * Silver Chalice at rest, black once selected. Only the picture is chosen here; every label stays the product's own
  * "Suitable for" text.
@@ -42,7 +43,7 @@ const rules: Array<[RegExp, string]> = [
   [/service vehicle/i, 'truck-delivery'],
   [/tractor unit/i, 'truck-loading'],
   [/^trucks?$/i, 'truck'],
-  [/machinery & vehicles/i, 'car-crane'],
+  [/construction vehicles/i, 'car-crane'],
   [/special machines/i, 'crane'],
   [/lifting/i, 'forklift'],
   [/pump|generator/i, 'engine'],
@@ -52,13 +53,37 @@ const rules: Array<[RegExp, string]> = [
   [/chain/i, 'link'],
 ];
 
+/*
+ * One line weight for the whole row: 1.0 on the 20 × 20 grid. Syn's icons are filled outlines drawn at different
+ * weights (the compactor 0.45, the key 1.25), so the thin ones get a matching outline added and the heavy ones are
+ * eroded by the difference; the drawn icons use a 1.0 stroke. The wrench keeps its smaller inset instead, which brings
+ * its 1.2 down to the same weight. Weights were measured from the rendered icons.
+ */
+const WEIGHT = 1;
+const synWeight: Partial<Record<IconName, number>> = { equipment: 0.8, 'navbar-2': 0.45, categories: 0.65, inventory: 1.15, 'ignition-key': 1.25 };
+
+function SynTermIcon({ name, size }: { name: IconName; size: number }) {
+  const filterId = `erode-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const w = synWeight[name] ?? WEIGHT;
+  const delta = Math.round((WEIGHT - w) * 1000) / 1000;
+  // Fixed markup from the Syn icon set, never user text.
+  const body = getIcon(name).body;
+  const inner = delta > 0
+    ? `<g stroke="currentColor" stroke-width="${delta}" stroke-linejoin="round">${body}</g>`
+    : delta < 0
+      ? `<defs><filter id="${filterId}"><feMorphology operator="erode" radius="${-delta / 2}"/></filter></defs><g filter="url(#${filterId})">${body}</g>`
+      : body;
+  return (
+    <svg className={cx('shop-term-icon', name === 'maintenance' && 'shop-term-icon--inset')} width={size} height={size} viewBox="0 0 20 20" aria-hidden dangerouslySetInnerHTML={{ __html: inner }} />
+  );
+}
+
 export function TermIcon({ term, size = 32 }: { term: string | null; size?: number }) {
   const syn = term === null ? undefined : synRules.find(([re]) => re.test(term))?.[1];
-  // The Syn wrench is drawn heavier and fills its box, so it is drawn smaller inside the same box (labels stay level).
-  if (syn) return <Icon name={syn} size={size} className={cx('shop-term-icon', syn === 'maintenance' && 'shop-term-icon--inset')} />;
+  if (syn) return <SynTermIcon name={syn} size={size} />;
   const key = term === null ? 'all' : rules.find(([re]) => re.test(term))?.[1] ?? 'all';
   // Fixed markup from `drawn` above, never user text.
   return (
-    <svg className="shop-term-icon" width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" aria-hidden dangerouslySetInnerHTML={{ __html: drawn[key] }} />
+    <svg className="shop-term-icon" width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={WEIGHT} strokeLinecap="round" strokeLinejoin="round" aria-hidden dangerouslySetInnerHTML={{ __html: drawn[key] }} />
   );
 }
