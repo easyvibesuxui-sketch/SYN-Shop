@@ -812,3 +812,8 @@ html { scroll-behavior: smooth; }
 .shop-cart-tip .syn-tooltip__bubble--bottom::after { right: 10px; left: auto; margin-left: 0; }
 /* A heavier Syn icon drawn smaller inside the same 32 px box, so the labels under the row stay level. */
 .shop-term-icon--inset { box-sizing: border-box; padding: 3px; }
+
+/* Outside labels on text areas keep the Shop's agreed look after the library update: the label in ABC Favorit Medium
+   12 (Eerie Black), the text in Montserrat Regular 14. The library's own outside label is Regular 14 Jet. */
+.shop-app .syn-textarea--outside .syn-textarea__label { color: var(--syn-text-primary); font: var(--syn-type-titles-title-5); }
+.shop-app .syn-textarea--outside .syn-textarea__input { font: var(--syn-type-text-body-s-2); }
