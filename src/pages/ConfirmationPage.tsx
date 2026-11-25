@@ -19,8 +19,8 @@ export function ConfirmationPage({ id }: { id: string }) {
   const count = o.items.reduce((n, i) => n + i.qty, 0);
   const steps: Array<[string, string]> = [
     ['Submitted', `${o.date} · ${o.time}`],
-    ['Syniotec confirms', t('Prices, stock and delivery costs. The confirmation goes to {0}.', [o.email])],
-    ['Delivery and invoice', t('You pay by invoice; nothing has been charged. Until Syniotec confirms, you can cancel the request under Requests.')],
+    ['Syniotec processes it', t('You get email updates on relevant changes at {0}, and the status and messages under Requests.', [o.email])],
+    ['Invoice', t('You pay by invoice; nothing has been charged. Until Syniotec confirms the order, you can cancel the request under Requests.')],
   ];
   return (
     <>
@@ -28,7 +28,7 @@ export function ConfirmationPage({ id }: { id: string }) {
     <Card className="shop-confirmation">
       <span className="shop-confirmation__mark"><Icon name="check" size={32} /></span>
       <h1 className="shop-confirmation__title">{t("Order request submitted")}</h1>
-      <p className="shop-text">{plural(count, 'item')} · {money(o.total)} {t("excl. VAT. This is an order request: Syniotec reviews it and confirms it by email, usually with the delivery date.")}</p>
+      <p className="shop-text">{plural(count, 'item')} · {money(o.total)} {t("excl. VAT. Your order request has been submitted and will be processed by Syniotec.")}</p>
       <span className="shop-order-id">{o.id}</span>
       <ol className="shop-timeline shop-confirmation__steps">
         {steps.map(([title, text], i) => <li key={title} className={i === 0 ? 'is-done' : undefined}><strong>{t(title)}</strong><span>{text}</span></li>)}

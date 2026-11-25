@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, DrawerRow, EmptyState, Icon, IconButton, Skeleton, StatusBadge, Tooltip, type IconName, type StatusTone } from '@syn';
 import { cx } from '@syn/utils';
-import { money, plural, type ArtType, type Availability, type OrderStatus, type PriceRequestStatus } from './data';
+import { minQty, money, packSize, plural, qtyProblem, type ArtType, type Availability, type OrderStatus, type PriceRequestStatus, type Product } from './data';
 import { routeHref, useShop } from './store';
 import hardwareArt from './assets/device-hardware.svg';
 import dotArt from './assets/device-dot.svg';
@@ -103,17 +103,63 @@ export function TableSkeleton({ rows = 4, label }: { rows?: number; label: strin
   );
 }
 
-/** Minus, the quantity and plus. Syn has no number stepper yet, so it is built from two outline IconButtons. */
-export function QuantityStepper({ value, onChange, label, size = 'sm' }: {
-  value: number; onChange: (qty: number) => void; label: string; size?: 'xs' | 'sm';
+/**
+ * Minus, the quantity and plus, with the number typeable in between. Syn has no compact number stepper, so it is built
+ * from two outline IconButtons and a bare input. `min` is the product's minimum order quantity; there is no maximum.
+ * Only valid quantities reach `onChange`; while the typed text is not one, the message shows under the stepper and
+ * `onValidChange(false)` lets the caller hold back its action (Add to cart, Send price request, Continue).
+ */
+export function QuantityStepper({ value, onChange, label, size = 'sm', min = 1, onValidChange }: {
+  value: number; onChange: (qty: number) => void; label: string; size?: 'xs' | 'sm'; min?: number;
+  onValidChange?: (valid: boolean) => void;
 }) {
+  const [draft, setDraft] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+  // Follow outside changes (the + and − buttons, another tab) unless the person is typing.
+  useEffect(() => { if (!focused) setDraft(String(value)); }, [value, focused]);
+  const parsed = /^\s*\d+\s*$/.test(draft) ? Number(draft) : draft.trim() === '' ? null : NaN;
+  const problem = qtyProblem({ minQty: min }, parsed);
+  // Report validity only when it changes; callers may pass a new callback on every render.
+  const report = useRef(onValidChange);
+  report.current = onValidChange;
+  useEffect(() => { report.current?.(!problem); }, [problem]);
+  const commit = (n: number) => { setDraft(String(n)); onChange(n); };
   return (
-    <div className={cx('shop-stepper', `shop-stepper--${size}`)} role="group" aria-label={t("{0} quantity", [label])}>
-      <IconButton icon="minus" label={t("Decrease {0}", [label])} size={size} variant="outline" disabled={value <= 1} onClick={() => onChange(value - 1)} />
-      <output className="shop-stepper__value" aria-live="polite">{value}</output>
-      <IconButton icon="plus" label={t("Increase {0}", [label])} size={size} variant="outline" disabled={value >= 999} onClick={() => onChange(value + 1)} />
+    <div className="shop-qty">
+      <div className={cx('shop-stepper', `shop-stepper--${size}`, problem && 'is-invalid')} role="group" aria-label={t("{0} quantity", [label])}>
+        <IconButton icon="minus" label={t("Decrease {0}", [label])} size={size} variant="outline" disabled={!problem && value <= min} onClick={() => commit(Math.max(min, (problem ? value : value - 1)))} />
+        <input
+          className="shop-stepper__value"
+          type="text"
+          inputMode="numeric"
+          aria-label={t("{0} quantity", [label])}
+          aria-invalid={problem ? true : undefined}
+          value={draft}
+          size={Math.max(2, draft.length)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setDraft(next);
+            const n = /^\s*\d+\s*$/.test(next) ? Number(next) : null;
+            if (n !== null && !qtyProblem({ minQty: min }, n)) onChange(n);
+          }}
+        />
+        <IconButton icon="plus" label={t("Increase {0}", [label])} size={size} variant="outline" onClick={() => commit(problem ? Math.max(min, value) : value + 1)} />
+      </div>
+      {problem && <span className="shop-qty__error" role="alert">{t(problem, [min])}</span>}
     </div>
   );
+}
+
+/** "Minimum order 10 pieces · Packaging unit 10 pieces", only for products where either is more than one piece. */
+export function OrderUnitNote({ product: p, className }: { product: Pick<Product, 'minQty' | 'packSize'>; className?: string }) {
+  const parts = [
+    minQty(p) > 1 && t("Minimum order {0}", [plural(minQty(p), 'piece')]),
+    packSize(p) > 1 && t("Packaging unit {0}", [plural(packSize(p), 'piece')]),
+  ].filter(Boolean);
+  if (!parts.length) return null;
+  return <span className={cx('shop-order-unit', className)}>{parts.join(' · ')}</span>;
 }
 
 /** Shop module header: title and lead on the left; My orders / Order by SKU and the cart on the right. Inner pages pass
@@ -204,7 +250,7 @@ export function Summary({ total, subtotal = true }: { total: number; subtotal?: 
     <dl className="shop-summary">
       {subtotal && <div><dt>{t("Subtotal")}</dt><dd>{money(total)}</dd></div>}
       <div><dt>{t("VAT")}</dt><dd>{t("Excluded")}</dd></div>
-      {subtotal && <div><dt>{t("Delivery")}</dt><dd>{t("Confirmed separately")}</dd></div>}
+      {subtotal && <div><dt>{t("Delivery")}</dt><dd>{t("Arranged by Syniotec")}</dd></div>}
       <div className="shop-summary__total"><dt>{t("Total")}</dt><dd>{money(total)}</dd></div>
     </dl>
   );

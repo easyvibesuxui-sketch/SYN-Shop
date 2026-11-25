@@ -26,7 +26,7 @@ const billingRequired: Field[] = ['billingAddress', 'billingZip', 'billingCity',
 /** Error copy says what to enter, not that something is wrong. */
 const missing: Partial<Record<Field, string>> = {
   name: 'Enter who Syniotec should contact about this order',
-  email: 'Enter an email address for the order confirmation',
+  email: 'Enter an email address for order updates',
   phone: 'Enter a phone number for delivery questions',
   street: 'Enter the street and house number',
   zip: 'Enter the postal code',
@@ -47,9 +47,9 @@ function validate(form: Form, billingSame: boolean) {
 }
 
 const nextSteps = [
-  ['Syniotec reviews your order request', 'and confirms prices, stock and delivery costs.'],
-  ['You get a confirmation by email', 'with the delivery date. The invoice follows separately.'],
-  ['Track it under Requests', 'from confirmed to shipped and completed. Until it is confirmed you can cancel it there.'],
+  ['Syniotec reviews your order request', 'and processes it. Prices are excl. VAT.'],
+  ['You get email updates', 'on relevant changes to your order. The invoice follows separately.'],
+  ['Track it under Requests', 'with its status and messages from Syniotec. Until it is confirmed you can cancel it there.'],
 ];
 
 export function CheckoutPage() {
@@ -119,7 +119,7 @@ export function CheckoutPage() {
 
   return (
     <>
-      <ShopHeader title={t("Submit order request")} lead={t("You are sending an order request, not buying online. Syniotec reviews and confirms it before anything is delivered or invoiced.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
+      <ShopHeader title={t("Submit order request")} lead={t("You are sending an order request, not buying online. Syniotec reviews and processes it before anything is delivered or invoiced.")} back={{ href: routeHref({ name: 'shop' }), label: t("Shop") }} />
 
       <form className="shop-checkout" onSubmit={submit} noValidate>
         <div className="shop-checkout__main">
@@ -134,7 +134,7 @@ export function CheckoutPage() {
           </Section>
 
           <Section title={t("Delivery address")}>
-            <p className="shop-muted">{t("Where the hardware should go. Syniotec confirms delivery costs before shipping.")}</p>
+            <p className="shop-muted">{t("Where the hardware should go.")}</p>
             <Grid gap={16}>
               <GridItem span={12}>{field('street', 'Street / address *')}</GridItem>
               <GridItem span={6}>{field('zip', 'ZIP / Postal code *')}</GridItem>
@@ -184,7 +184,7 @@ export function CheckoutPage() {
             ))}
           </ul>
           <Summary total={cartTotal} />
-          <InfoNote>{t("Prices are excl. VAT. No online payment: Syniotec reviews and confirms your request, then invoices separately.")}</InfoNote>
+          <InfoNote>{t("Prices are excl. VAT. No online payment: Syniotec reviews and processes your request, then invoices separately.")}</InfoNote>
           {failed && <InfoNote tone="warning">{t("The last attempt failed and nothing was sent. Submit again to retry.")}</InfoNote>}
           <Button type="submit" size="md" fullWidth loading={sending} disabled={cartBlocked || !orderable.length}>{t("Submit order request ·")} {money(cartTotal)}</Button>
           <div className="shop-next">

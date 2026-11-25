@@ -84,6 +84,27 @@ function OrderChangeNote({ order: o }: { order: Order }) {
   return null;
 }
 
+/** Messages Syniotec wrote about the order, newest first, with their date. Read-only: customers don't reply here. */
+function OrderMessages({ order: o }: { order: Order }) {
+  const list = [...(o.messages ?? [])].reverse();
+  return (
+    <Section title={t("Messages from Syniotec")}>
+      {list.length ? (
+        <ul className="shop-messages">
+          {list.map((m, i) => (
+            <li key={`${m.date}-${i}`} className="shop-messages__item">
+              <span className="shop-messages__date">{m.date}</span>
+              <p className="shop-messages__text">{t(m.text)}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="shop-muted">{t("No messages yet. Syniotec adds a note here when there is something to tell you about this order.")}</p>
+      )}
+    </Section>
+  );
+}
+
 /** Cancel order with its confirmation popup; only offered while the order is Submitted. */
 function useCancelOrder() {
   const { cancelOrder } = useShop();
@@ -131,11 +152,14 @@ function OrderDetail({ order: o }: { order: Order }) {
             <SpecList rows={orderInfo(o)} />
           </Section>
         </div>
-        <Section title={t("Order status")}>
-          <p className="shop-muted">{t("Syniotec updates the status at each step and emails the contact person when it changes.")}</p>
-          <OrderTimeline order={o} />
-          <OrderChangeNote order={o} />
-        </Section>
+        <div className="shop-stack">
+          <Section title={t("Order status")}>
+            <p className="shop-muted">{t("Syniotec updates the status as the order moves on and emails the contact person about relevant updates.")}</p>
+            <OrderTimeline order={o} />
+            <OrderChangeNote order={o} />
+          </Section>
+          <OrderMessages order={o} />
+        </div>
       </div>
       {cancel.dialog}
     </>
@@ -169,6 +193,7 @@ function OrderDrawer({ order: o, onClose }: { order: Order | null; onClose: () =
               <OrderTimeline order={o} />
               <OrderChangeNote order={o} />
             </Section>
+            <OrderMessages order={o} />
             <Section title={t("Order items")}>
               <p className="shop-muted">{t("Prices excl. VAT as they were when the order was sent. Ordering again uses today’s prices and availability.")}</p>
               <OrderItems order={o} />

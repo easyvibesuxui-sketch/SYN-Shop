@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { NotificationTone } from '@syn';
 import {
-  CURRENT_USER, canOrder, defaultProducts, plural, seedOrders, seedPriceRequests, stamp,
+  CURRENT_USER, canOrder, defaultProducts, minQty, plural, seedOrders, seedPriceRequests, stamp,
   type CartLine, type Order, type PriceRequest, type Product,
 } from './data';
 import { t } from './i18n';
@@ -54,7 +54,7 @@ export interface DemoSettings {
 const defaultSettings: DemoSettings = { app: 'SAM', shopAccess: true, slowLoading: false, loadError: false, failNextSubmit: false };
 
 // v4: V1 scope (product status, new order states, organisation-wide requests), so older stored data is not reused.
-const VERSION = 'syn-shop-v4';
+const VERSION = 'syn-shop-v5';
 function load<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(`${VERSION}:${key}`);
@@ -159,15 +159,16 @@ function useShopState() {
       const next = [...list];
       for (const { product, qty } of ok) {
         const i = next.findIndex((l) => l.productId === product.id);
-        if (i >= 0) next[i] = { ...next[i], qty: Math.min(999, next[i].qty + qty) };
-        else next.push({ productId: product.id, qty: Math.min(999, qty), price: product.price });
+        // No maximum; a new line never starts below the product's minimum order quantity.
+        if (i >= 0) next[i] = { ...next[i], qty: next[i].qty + qty };
+        else next.push({ productId: product.id, qty: Math.max(minQty(product), qty), price: product.price });
       }
       return next;
     });
     return ok.length;
   }, [setCart]);
 
-  const addToCart = useCallback((p: Product, qty = 1) => {
+  const addToCart = useCallback((p: Product, qty = minQty(p)) => {
     if (!addLines([{ product: p, qty }])) {
       notify(t("{0} can’t be ordered right now", [p.name]), t("It is unavailable or has no published price. Request a price instead."), 'warning');
       return;
@@ -181,8 +182,9 @@ function useShopState() {
     const archived = found.filter((f) => !f.product || f.product.status !== 'Published');
     const unavailable = found.filter((f) => f.product && f.product.status === 'Published' && !canOrder(f.product));
     const ok = found.filter((f) => f.product && canOrder(f.product));
-    const added = addLines(ok.map((f) => ({ product: f.product!, qty: f.item.qty })));
+    const added = addLines(ok.map((f) => ({ product: f.product!, qty: Math.max(minQty(f.product!), f.item.qty) })));
     const changed = ok.some((f) => f.product!.price !== f.item.price);
+    const raised = ok.filter((f) => f.item.qty < minQty(f.product!));
     if (!added) {
       notify(t("Nothing could be added"), t("None of the products from {0} can be ordered right now.", [order.id]), 'warning');
       return;
@@ -193,8 +195,12 @@ function useShopState() {
     ].filter(Boolean).join('; ');
     notify(
       t("{0} from {1} added to your cart", [plural(added, 'product'), order.id]),
-      [left && t("Left out: {0}.", [left]), changed ? t("Some prices have changed since this order; the cart shows today’s prices.") : t("Same quantities as last time, at today’s prices.")].filter(Boolean).join(' '),
-      left || changed ? 'warning' : 'success',
+      [
+        left && t("Left out: {0}.", [left]),
+        raised.length ? t("{0} raised to the minimum order quantity.", [raised.map((f) => f.item.name).join(', ')]) : '',
+        changed ? t("Some prices have changed since this order; the cart shows today’s prices.") : (raised.length ? '' : t("Same quantities as last time, at today’s prices.")),
+      ].filter(Boolean).join(' '),
+      left || changed || raised.length ? 'warning' : 'success',
       viewCart,
     );
     setCartOpen(true);
@@ -211,8 +217,13 @@ function useShopState() {
   }, [notify, setRequests]);
 
   const setQty = useCallback((productId: string, qty: number) => {
-    setCart((list) => list.map((l) => (l.productId === productId ? { ...l, qty: Math.max(1, Math.min(999, qty)) } : l)));
-  }, [setCart]);
+    // Never below the product's minimum order quantity; no maximum.
+    setCart((list) => list.map((l) => {
+      if (l.productId !== productId) return l;
+      const product = products.find((p) => p.id === productId);
+      return { ...l, qty: Math.max(product ? minQty(product) : 1, Math.round(qty)) };
+    }));
+  }, [setCart, products]);
   const removeFromCart = useCallback((productId: string) => setCart((list) => list.filter((l) => l.productId !== productId)), [setCart]);
 
   /**

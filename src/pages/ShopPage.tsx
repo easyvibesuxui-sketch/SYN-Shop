@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Checkbox, EmptyState, Icon, IconButton, Skeleton, Table, Tag, TextField, Tooltip } from '@syn';
 import { cx } from '@syn/utils';
 import {
-  FEATURED_ORDER, POWER_OPTIONS, canOrder, hasPrice, isListed, plural, priceLabel, suitableFor, suitableTerms,
+  FEATURED_ORDER, POWER_OPTIONS, canOrder, hasPrice, isListed, minQty, plural, priceLabel, suitableFor, suitableTerms,
   type Availability, type Category, type Power, type Product,
 } from '../data';
 import { PriceRequestDialog } from '../PriceRequest';
 import { QuickOrder } from '../QuickOrder';
-import { AvailabilityBadge, Chips, LoadError, ProductArt, QuantityStepper, ShopHeader } from '../parts';
+import { AvailabilityBadge, Chips, LoadError, OrderUnitNote, ProductArt, QuantityStepper, ShopHeader } from '../parts';
 import { routeHref, useLoad, useShop } from '../store';
 import { TermIcon } from '../termIcons';
 import { t } from '../i18n';
@@ -59,13 +59,14 @@ function sortProducts(list: Product[], sort: Sort) {
 /** Quantity and the main action, inline: B2B buyers order in quantities, so the stepper sits next to the button. */
 function BuyControls({ product: p, onRequest, compact }: { product: Product; onRequest: (p: Product) => void; compact?: boolean }) {
   const { addToCart } = useShop();
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(minQty(p));
+  const [valid, setValid] = useState(true);
   if (p.availability === 'Temporarily unavailable') return <Button size="sm" disabled>{t("Temporarily unavailable")}</Button>;
   if (!canOrder(p)) return <Button size="sm" variant="secondary" iconStart="mail" onClick={() => onRequest(p)}>{t("Request price")}</Button>;
   return (
     <div className={cx('shop-buy-controls', compact && 'is-compact')}>
-      <QuantityStepper size="xs" label={p.name} value={qty} onChange={setQty} />
-      <Button size="sm" iconStart="plus" onClick={() => { addToCart(p, qty); setQty(1); }}>{t("Add")}</Button>
+      <QuantityStepper size="xs" label={p.name} value={qty} onChange={setQty} min={minQty(p)} onValidChange={setValid} />
+      <Button size="sm" iconStart="plus" disabled={!valid} onClick={() => { addToCart(p, qty); setQty(minQty(p)); }}>{t("Add")}</Button>
     </div>
   );
 }
@@ -92,11 +93,12 @@ function CardBuy({ product: p, onRequest }: { product: Product; onRequest: (p: P
   if (!inCart) {
     return (
       <Tooltip content={t("Add to cart")} placement="left">
-        <button type="button" className="shop-card__fab" aria-label={t("Add {0} to cart", [p.name])} onClick={() => addToCart(p, 1)}><Icon name="plus" size={20} /></button>
+        <button type="button" className="shop-card__fab" aria-label={t("Add {0} to cart", [p.name])} onClick={() => addToCart(p)}><Icon name="plus" size={20} /></button>
       </Tooltip>
     );
   }
-  const last = inCart === 1;
+  // The + on the photo adds the minimum order quantity; at the minimum the − becomes a bin that removes the line.
+  const last = inCart <= minQty(p);
   return (
     <div className="shop-card__stepper" role="group" aria-label={t("{0} in your cart", [p.name])}>
       <IconButton
@@ -106,7 +108,7 @@ function CardBuy({ product: p, onRequest }: { product: Product; onRequest: (p: P
         onClick={() => (last ? removeFromCart(p.id) : setQty(p.id, inCart - 1))}
       />
       <output aria-live="polite">{inCart}</output>
-      <IconButton icon="plus" label={t("Increase {0}", [p.name])} size="sm" disabled={inCart >= 999} onClick={() => setQty(p.id, inCart + 1)} />
+      <IconButton icon="plus" label={t("Increase {0}", [p.name])} size="sm" onClick={() => setQty(p.id, inCart + 1)} />
     </div>
   );
 }
@@ -142,6 +144,7 @@ function ProductCard({ product: p, onRequest }: { product: Product; onRequest: (
         <div className="shop-card__price">
           <span className="shop-price">{priceLabel(p)}</span>
           <span className="shop-tax">{p.availability === 'Temporarily unavailable' ? t("can’t be ordered right now") : hasPrice(p) ? t("per item, excl. VAT") : t("quoted for your quantity")}</span>
+          <OrderUnitNote product={p} />
         </div>
       </div>
     </article>
@@ -346,7 +349,7 @@ function TermBar({ terms, selected, onToggle, onAll }: { terms: string[]; select
 const steps: Array<[string, string]> = [
   ['Add products', 'Choose hardware and tags and set quantities.'],
   ['Submit an order request', 'No online payment. Prices are excl. VAT.'],
-  ['Syniotec confirms', 'Prices, delivery and invoice follow by email.'],
+  ['Syniotec processes it', 'You get email updates on relevant changes to your order.'],
 ];
 
 export function ShopPage() {

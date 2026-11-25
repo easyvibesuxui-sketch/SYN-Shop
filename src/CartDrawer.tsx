@@ -1,6 +1,7 @@
+import { useCallback, useState } from 'react';
 import { Button, Drawer, EmptyState } from '@syn';
-import { money, plural } from './data';
-import { DrawerIntro, DrawerLabel, InfoNote, ProductArt, QuantityStepper, Summary } from './parts';
+import { minQty, money, plural } from './data';
+import { DrawerIntro, DrawerLabel, InfoNote, OrderUnitNote, ProductArt, QuantityStepper, Summary } from './parts';
 import { useShop, type CartItem } from './store';
 import { t } from './i18n';
 
@@ -19,7 +20,7 @@ export function CartNotices() {
 }
 
 /** A cart line: today's price, the old price when it changed, or why the product can't be ordered any more. */
-function CartLineView({ line: l }: { line: CartItem }) {
+function CartLineView({ line: l, onValidChange }: { line: CartItem; onValidChange: (id: string, valid: boolean) => void }) {
   const { setQty, removeFromCart } = useShop();
   const ok = l.state === 'ok' && l.product;
   return (
@@ -35,8 +36,9 @@ function CartLineView({ line: l }: { line: CartItem }) {
         ) : (
           <span className="shop-line-problem">{l.state === 'archived' ? t("No longer offered") : t("Not available for ordering right now")}</span>
         )}
-        <div className="shop-row">
-          {ok && <QuantityStepper size="xs" label={l.name} value={l.qty} onChange={(q) => setQty(l.productId, q)} />}
+        {ok && <OrderUnitNote product={l.product!} />}
+        <div className="shop-row shop-row--top">
+          {ok && <QuantityStepper size="xs" label={l.name} value={l.qty} min={minQty(l.product!)} onChange={(q) => setQty(l.productId, q)} onValidChange={(v) => onValidChange(l.productId, v)} />}
           <Button size="xs" variant="text" onClick={() => removeFromCart(l.productId)} aria-label={t("Remove {0}", [l.name])}>{t("Remove")}</Button>
         </div>
       </div>
@@ -45,15 +47,21 @@ function CartLineView({ line: l }: { line: CartItem }) {
   );
 }
 
-export function CartLines() {
+/** The cart lines; `onValidChange` reports a line whose typed quantity is not valid yet, so Continue can wait. */
+export function CartLines({ onValidChange }: { onValidChange: (id: string, valid: boolean) => void }) {
   const { cart } = useShop();
-  return <ul className="shop-cart__lines">{cart.map((l) => <CartLineView key={l.productId} line={l} />)}</ul>;
+  return <ul className="shop-cart__lines">{cart.map((l) => <CartLineView key={l.productId} line={l} onValidChange={onValidChange} />)}</ul>;
 }
 
 /** The cart as a narrow Syn drawer: lines with a quantity stepper, the summary and "Continue to order". */
 export function CartDrawer() {
   const { cart, cartQty, cartTotal, cartBlocked, cartOpen, setCartOpen, go, route } = useShop();
   const close = () => setCartOpen(false);
+  const [invalid, setInvalid] = useState<string[]>([]);
+  const onValidChange = useCallback((id: string, valid: boolean) => {
+    setInvalid((list) => (valid ? (list.includes(id) ? list.filter((x) => x !== id) : list) : list.includes(id) ? list : [...list, id]));
+  }, []);
+  const typing = invalid.some((id) => cart.some((l) => l.productId === id));
   const to = (name: 'checkout' | 'shop') => {
     close();
     // The checkout page itself opens the cart for "Back to cart"; going there again only closes the drawer.
@@ -68,15 +76,15 @@ export function CartDrawer() {
       width={480}
       closeLabel={t("Close cart")}
       headerStart={<DrawerLabel>{t("Your cart")}</DrawerLabel>}
-      footer={cart.length ? <Button size="sm" fullWidth iconEnd="arrow" disabled={cartBlocked} onClick={() => to('checkout')}>{t("Continue to order")}</Button> : undefined}
+      footer={cart.length ? <Button size="sm" fullWidth iconEnd="arrow" disabled={cartBlocked || typing} onClick={() => to('checkout')}>{t("Continue to order")}</Button> : undefined}
     >
       <DrawerIntro>{cartQty ? t("{0} · prices excl. VAT", [plural(cartQty, 'item')]) : t("No products added yet")}</DrawerIntro>
       {cart.length ? (
         <div className="shop-cart">
           <CartNotices />
-          <CartLines />
+          <CartLines onValidChange={onValidChange} />
           <Summary total={cartTotal} />
-          <InfoNote>{t("No online payment. You send an order request; Syniotec reviews it, confirms delivery details and invoices separately.")}</InfoNote>
+          <InfoNote>{t("No online payment. You send an order request; Syniotec processes it and invoices separately.")}</InfoNote>
         </div>
       ) : (
         <div className="shop-cart shop-cart--empty">

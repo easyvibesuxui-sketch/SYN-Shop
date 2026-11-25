@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Card, FileItem, Icon, Section } from '@syn';
 import { cx } from '@syn/utils';
-import { canOrder, hasPrice, isListed, money, priceLabel } from '../data';
+import { canOrder, hasPrice, isListed, minQty, money, priceLabel } from '../data';
 import { PriceRequestDialog } from '../PriceRequest';
-import { AvailabilityBadge, Chips, InfoNote, ProductArt, QuantityStepper, ShopHeader, SpecList } from '../parts';
+import { AvailabilityBadge, Chips, InfoNote, OrderUnitNote, ProductArt, QuantityStepper, ShopHeader, SpecList } from '../parts';
 import { routeHref, useShop } from '../store';
 import { t } from '../i18n';
 
@@ -11,8 +11,11 @@ export function ProductPage({ id }: { id: string }) {
   const { products, addToCart, notify, cart } = useShop();
   const [requesting, setRequesting] = useState(false);
   const p = products.find((x) => x.id === id && isListed(x));
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(p ? minQty(p) : 1);
+  const [valid, setValid] = useState(true);
   const [shown, setShown] = useState(0);
+  // Each product starts at its own minimum order quantity.
+  useEffect(() => { if (p) setQty(minQty(p)); }, [p?.id]);
 
   if (!p) {
     return (
@@ -89,21 +92,22 @@ export function ProductPage({ id }: { id: string }) {
           <div>
             <p className="shop-buy__price">{priceLabel(p)}</p>
             <p className="shop-tax">{hasPrice(p) ? t("Per item, excl. VAT") : t("Syniotec quotes a price for your quantity")}</p>
+            <OrderUnitNote product={p} />
           </div>
           {unavailable ? (
             <Button size="md" fullWidth disabled>{t("Temporarily unavailable")}</Button>
           ) : canOrder(p) ? (<>
             <span className="shop-field-label">{t("Quantity")}</span>
             <div className="shop-buy__row">
-              <QuantityStepper label={p.name} value={qty} onChange={setQty} />
-              <Button size="md" fullWidth iconStart="plus" onClick={() => addToCart(p, qty)}>
-                {qty > 1 ? t('Add {0} to cart · {1}', [qty, money(qty * p.price)]) : t('Add to cart')}
+              <QuantityStepper label={p.name} value={qty} onChange={setQty} min={minQty(p)} onValidChange={setValid} />
+              <Button size="md" fullWidth iconStart="plus" disabled={!valid} onClick={() => addToCart(p, qty)}>
+                {valid && qty > 1 ? t('Add {0} to cart · {1}', [qty, money(qty * p.price)]) : t('Add to cart')}
               </Button>
             </div>
           </>) : (
             <Button size="md" fullWidth variant="secondary" iconStart="mail" onClick={() => setRequesting(true)}>{t("Request a price")}</Button>
           )}
-          {p.availability === 'Available on request' && hasPrice(p) && <InfoNote>{t("Out of stock right now. You can still order it; Syniotec confirms the delivery date.")}</InfoNote>}
+          {p.availability === 'Available on request' && hasPrice(p) && <InfoNote>{t("Out of stock right now. You can still send an order request; Syniotec processes it and keeps you updated by email.")}</InfoNote>}
           {!hasPrice(p) && !unavailable && <InfoNote>{t("This product has no published price. Request a price and Syniotec replies by email; ordering opens once a price is published.")}</InfoNote>}
           {unavailable && <InfoNote tone="warning">{t("This product can’t be ordered right now. Check back later or contact Syniotec.")}</InfoNote>}
           {inCart > 0 && <p className="shop-in-cart"><Icon name="check" size={16} />{inCart} {t("already in your cart")}</p>}

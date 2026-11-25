@@ -48,6 +48,10 @@ export interface Product {
   power?: Power;
   /** Ingress protection, where the data sheet states it. */
   ip?: string;
+  /** Minimum order quantity in pieces; quantities below it can't be ordered or requested. Default 1. */
+  minQty?: number;
+  /** Pieces per packaging unit (e.g. tags come in packs of 10), shown where it is more than 1. */
+  packSize?: number;
 }
 
 export type Power = 'External power' | 'Battery' | 'Solar' | 'Passive';
@@ -84,6 +88,14 @@ export interface Order {
   /** Shipment tracking number, once Syniotec has shipped the order. */
   trackingNumber?: string;
   history: Array<[OrderStatus, string]>;
+  /** Messages Syniotec wrote to the customer about this order, oldest first. Read-only in the Shop. */
+  messages?: OrderMessage[];
+}
+
+/** A message from Syniotec about an order, e.g. a note on delivery or a reason for a delay. */
+export interface OrderMessage {
+  date: string;
+  text: string;
 }
 
 /** A request for a price on a product that has none yet ("Price on request"). */
@@ -179,7 +191,7 @@ const catalogue: Product[] = [
     image: hardwareImages.dot,
   }),
   hardware({
-    id: 'DOT-MINI', name: 'DOT mini', type: 'dot', price: 0, availability: 'Available on request',
+    id: 'DOT-MINI', name: 'DOT mini', type: 'dot', price: 0, availability: 'Available on request', minQty: 5, packSize: 5,
     short: 'Compact BLE beacon for small equipment & devices',
     description: 'Compact DOT variant for Bluetooth-based equipment identification and tracking.',
     features: ['Bluetooth beacon', 'Compact form factor', 'For small equipment and devices'],
@@ -242,22 +254,22 @@ const catalogue: Product[] = [
     image: sam('dashcam-cam.png'),
   }),
   tag({
-    id: 'TAG-L', name: 'TAG L', type: 'tags', price: 24.9, availability: 'Available',
+    id: 'TAG-L', name: 'TAG L', type: 'tags', price: 24.9, availability: 'Available', minQty: 5, packSize: 5,
     short: 'For construction machinery and large equipment', description: tagDescription,
     features: tagFeatures, specs: tagSpecs('TAG L'), image: tagL, gallery: [tagM, tagS, tagCollage],
   }),
   tag({
-    id: 'TAG-M', name: 'TAG M', type: 'tags', price: 21.9, availability: 'Available',
+    id: 'TAG-M', name: 'TAG M', type: 'tags', price: 21.9, availability: 'Available', minQty: 10, packSize: 10,
     short: 'For construction machinery and large equipment', description: tagDescription,
     features: tagFeatures, specs: tagSpecs('TAG M'), image: tagM, gallery: [tagL, tagS, tagCollage],
   }),
   tag({
-    id: 'TAG-S', name: 'TAG S', type: 'tags', price: 18.9, availability: 'Available',
+    id: 'TAG-S', name: 'TAG S', type: 'tags', price: 18.9, availability: 'Available', minQty: 10, packSize: 10,
     short: 'For construction machinery and large equipment', description: tagDescription,
     features: tagFeatures, specs: tagSpecs('TAG S'), image: tagS, gallery: [tagM, tagL, tagCollage],
   }),
   tag({
-    id: 'TOOL-TAGS', name: 'TOOL-TAGS', type: 'tool', price: 9.9, availability: 'Available',
+    id: 'TOOL-TAGS', name: 'TOOL-TAGS', type: 'tool', price: 9.9, availability: 'Available', minQty: 20, packSize: 20,
     short: 'For tools and small equipment',
     description: 'A passive telematics variant for tools and small equipment with direct access to the equipment profile.',
     features: ['For tools and small equipment', 'Direct equipment-profile access', 'Part of Syniotec passive telematics'],
@@ -265,7 +277,7 @@ const catalogue: Product[] = [
     image: toolTags, gallery: [tagCollage],
   }),
   tag({
-    id: 'CHAIN-TAG', name: 'CHAIN-TAG', type: 'chain', price: 14.9, availability: 'Available on request',
+    id: 'CHAIN-TAG', name: 'CHAIN-TAG', type: 'chain', price: 14.9, availability: 'Available on request', minQty: 5, packSize: 5,
     short: 'For heavy chains',
     description: 'The passive telematics variant for heavy chains, providing access to the associated equipment profile.',
     features: ['For heavy chains', 'Direct equipment-profile access', 'Part of Syniotec passive telematics'],
@@ -273,7 +285,7 @@ const catalogue: Product[] = [
     image: chainTag, gallery: [tagCollage],
   }),
   tag({
-    id: 'QR-STICKER', name: 'QR-Sticker', type: 'qr', price: 3.5, availability: 'Available',
+    id: 'QR-STICKER', name: 'QR-Sticker', type: 'qr', price: 3.5, availability: 'Available', minQty: 50, packSize: 50,
     short: 'For QR access to the equipment profile',
     description: 'A passive QR-based option for direct access to the equipment profile.',
     features: ['QR access', 'Quick and easy installation', 'Part of Syniotec passive telematics'],
@@ -282,7 +294,7 @@ const catalogue: Product[] = [
   }),
   // Not shown in the Shop: an archived product that earlier orders still contain, and a draft not yet published.
   tag({
-    id: 'TAG-XL', name: 'TAG XL', type: 'tags', price: 27.9, availability: 'Available', status: 'Archived',
+    id: 'TAG-XL', name: 'TAG XL', type: 'tags', price: 27.9, availability: 'Available', status: 'Archived', minQty: 5, packSize: 5,
     short: 'For very large equipment', description: tagDescription,
     features: tagFeatures, specs: tagSpecs('TAG XL'), image: tagL, gallery: [],
   }),
@@ -375,6 +387,7 @@ export const seedOrders: Order[] = [
     total: 954, status: 'Confirmed', address: 'Werk 2, Industriestraße 9, 28197 Bremen, Germany', billing: companyBilling,
     reference: 'WAREHOUSE-02', comment: 'Deliver to gate 3.',
     history: [['Submitted', '12.11.2026 · 15:40'], ['Confirmed', '13.11.2026 · 08:55']],
+    messages: [{ date: '13.11.2026 · 08:57', text: 'Thank you, your order is confirmed. We have noted gate 3 for the delivery.' }],
   },
   {
     id: 'SO-2026-00127', date: '04.11.2026', time: '11:20', ...people.lukas, org,
@@ -385,6 +398,7 @@ export const seedOrders: Order[] = [
     total: 1185, status: 'Shipped', trackingNumber: 'DHL 00340434161094042557', address: delivery, billing: companyBilling,
     reference: '', comment: 'Please contact our site manager before delivery.',
     history: [['Submitted', '04.11.2026 · 11:20'], ['Confirmed', '04.11.2026 · 14:05'], ['Shipped', '06.11.2026 · 10:30']],
+    messages: [{ date: '06.11.2026 · 10:32', text: 'Your order has shipped in two parcels with DHL. The tracking number covers both.' }],
   },
   {
     id: 'SO-2026-00124', date: '13.10.2026', time: '14:32', ...people.john, org,
@@ -395,6 +409,7 @@ export const seedOrders: Order[] = [
     total: 688, status: 'Completed', trackingNumber: 'DHL 00340434161094031122', address: delivery, billing: companyBilling,
     reference: 'SITE-NORD-042', comment: 'Please contact our site manager before delivery.',
     history: [['Submitted', '13.10.2026 · 14:32'], ['Confirmed', '13.10.2026 · 16:05'], ['Shipped', '15.10.2026 · 09:20'], ['Completed', '17.10.2026 · 12:10']],
+    messages: [{ date: '13.10.2026 · 16:06', text: 'Order confirmed.' }, { date: '17.10.2026 · 12:12', text: 'Delivered to your site. Thank you for your order.' }],
   },
   {
     id: 'SO-2026-00121', date: '29.09.2026', time: '10:02', ...people.anna, org,
@@ -403,6 +418,7 @@ export const seedOrders: Order[] = [
     address: 'Baustelle Linz, Hafenstraße 12, 4020 Linz, Austria', billing: companyBilling,
     reference: 'AT-LINZ-01', comment: '',
     history: [['Submitted', '29.09.2026 · 10:02'], ['Rejected', '30.09.2026 · 09:15']],
+    messages: [{ date: '30.09.2026 · 09:16', text: 'We can’t deliver DASHCAM to Austria at the moment. Please contact us if you need an alternative.' }],
   },
   {
     id: 'SO-2026-00118', date: '08.09.2026', time: '11:05', ...people.lukas, org,
@@ -436,6 +452,18 @@ export const priceLabel = (p: Pick<Product, 'price'>) => (hasPrice(p) ? money(p.
 /** Shown in the Shop: published products only. */
 export const isListed = (p: Pick<Product, 'status'>) => p.status === 'Published';
 /** Orderable: published, not temporarily unavailable, with a published price. Out of stock is still orderable. */
+/** Minimum order quantity and packaging unit, with defaults for products that don't set them. */
+export const minQty = (p: Pick<Product, 'minQty'>) => Math.max(1, p.minQty ?? 1);
+export const packSize = (p: Pick<Product, 'packSize'>) => Math.max(1, p.packSize ?? 1);
+
+/** Why a quantity can't be used for this product, or null when it can. Whole pieces, at least the minimum; no maximum. */
+export function qtyProblem(p: Pick<Product, 'minQty'>, qty: number | null): string | null {
+  if (qty === null || Number.isNaN(qty)) return 'Enter a quantity.';
+  if (!Number.isInteger(qty) || qty < 1) return 'Enter a whole number of pieces.';
+  if (qty < minQty(p)) return 'The minimum order quantity is {0} pieces.';
+  return null;
+}
+
 export const canOrder = (p: Product) => isListed(p) && p.availability !== 'Temporarily unavailable' && hasPrice(p);
 /** A price can be requested for published products without a published price that are not temporarily unavailable. */
 export const canRequestPrice = (p: Product) => isListed(p) && p.availability !== 'Temporarily unavailable' && !hasPrice(p);

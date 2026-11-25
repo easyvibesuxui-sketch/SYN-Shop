@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Button, Drawer, Icon, TextArea } from '@syn';
 import { cx } from '@syn/utils';
-import { canOrder, money, plural, type Product } from './data';
+import { canOrder, minQty, money, plural, type Product } from './data';
 import { DrawerIntro, DrawerLabel } from './parts';
 import { useShop } from './store';
 import { t } from './i18n';
@@ -11,22 +11,29 @@ interface Parsed {
   product?: Product;
   qty: number;
   problem?: string;
+  /** Values for the problem text, e.g. the minimum order quantity. */
+  args?: Array<string | number>;
 }
 
 const normalise = (v: string) => v.toUpperCase().replace(/[\s_]+/g, '-');
 
-/** One product per line: a SKU or name, then a quantity ("DOT 10", "TAG-S, 15", "QR-Sticker x40"). */
+/**
+ * One line per product: the SKU, then the quantity ("LINK 2", "TAG-S, 20", "QR-STICKER x50"). Only SKUs are matched,
+ * not product names. Each line is checked against the product's minimum order quantity; there is no maximum.
+ */
 export function parseQuickOrder(text: string, products: Product[]): Parsed[] {
   return text.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
     const m = line.match(/^(.*?)[\s,;:x×*]*(\d+)\s*(?:pcs|pc|st)?\.?$/i);
     const key = normalise((m ? m[1] : line).replace(/[,;:]+$/, '').trim());
-    const qty = m ? Math.min(999, Number(m[2])) : 1;
+    const qty = m ? Number(m[2]) : 0;
     // Drafts are not public, so they read as unknown; archived products say they are no longer offered.
-    const product = products.find((p) => p.status !== 'Draft' && (normalise(p.id) === key || normalise(p.name) === key));
+    const product = products.find((p) => p.status !== 'Draft' && normalise(p.id) === key);
     if (!product) return { line, qty, problem: 'SKU not found' };
     if (product.status === 'Archived') return { line, product, qty, problem: 'No longer offered' };
     if (!canOrder(product)) return { line, product, qty, problem: product.availability === 'Temporarily unavailable' ? 'Temporarily unavailable' : 'Price on request' };
+    if (!m) return { line, product, qty, problem: 'Add the quantity after the SKU' };
     if (!qty) return { line, product, qty, problem: 'Quantity is 0' };
+    if (qty < minQty(product)) return { line, product, qty, problem: 'Below the minimum order quantity of {0}', args: [minQty(product)] };
     return { line, product, qty };
   });
 }
@@ -67,8 +74,8 @@ export function QuickOrder({ open, onClose }: { open: boolean; onClose: () => vo
           label={t("Products and quantities")}
           hideLabel={false}
           labelPosition="outside"
-          hint={t("One product per line: SKU or name, then the quantity. You can paste a column from Excel.")}
-          placeholder={t("DOT 10\nTAG-S 15\nQR-Sticker 40")}
+          hint={t("One line per product: the SKU, then the quantity. You can paste two columns from Excel.")}
+          placeholder={"LINK 2\nTAG-S 20\nQR-STICKER 50"}
           rows={6}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -79,8 +86,8 @@ export function QuickOrder({ open, onClose }: { open: boolean; onClose: () => vo
               <li key={`${r.line}-${i}`} className={cx(r.problem && 'is-problem')}>
                 <Icon name={r.problem ? 'warning' : 'check'} size={16} />
                 <span className="shop-cell">
-                  <strong>{r.product ? r.product.name : r.line}</strong>
-                  <span>{r.problem ? `${t(r.problem)}${r.product ? '' : ` · “${r.line}”`}` : `${r.qty} × ${money(r.product!.price)}`}</span>
+                  <strong>{r.product ? `${r.product.id} · ${r.product.name}` : r.line}</strong>
+                  <span>{r.problem ? `${t(r.problem, r.args)}${r.product ? '' : ` · “${r.line}”`}` : `${r.qty} × ${money(r.product!.price)}`}</span>
                 </span>
                 {!r.problem && <strong>{money(r.qty * r.product!.price)}</strong>}
               </li>
